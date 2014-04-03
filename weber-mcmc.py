@@ -14,7 +14,7 @@ def make_model_Uniform(n1, n2, ntrials, ncorrect):
 	@pymc.deterministic
 	def p_correct(W=W, n1=n1, n2=n2): return Weber_probability_correct(W, n1, n2)
 		
-	# Now the data:
+	# Now the data:n
 	data = pymc.Binomial('data', n=ntrials, p=p_correct, value=ncorrect, observed=True)
 	
 	# and pymc return
@@ -71,11 +71,11 @@ if __name__ == "__main__":
 	
 	# MCMC parameters
 	parser.add_argument('--samples', dest='samples', type=int, default=10000, nargs="?", help='Number of samples to run')
-	parser.add_argument('--skip', dest='skip', type=int, default=50, nargs="?", help='Skip in chains')
-	parser.add_argument('--burn', dest='burn', type=int, default=500, nargs="?", help='Burn-in time')
-	parser.add_argument('--tune', dest='tune', type=int, default=500, nargs="?", help='Number of tuning steps')
+	parser.add_argument('--skip', dest='skip', type=int, default=20, nargs="?", help='Skip in chains')
+	parser.add_argument('--burn', dest='burn', type=int, default=2000, nargs="?", help='Burn-in time')
+	parser.add_argument('--tune', dest='tune', type=int, default=1000, nargs="?", help='Number of tuning steps')
 	
-	parser.add_argument('--data', dest='data', type=str, default='zenith-reprocessed.csv', nargs="?", help='What data file?')
+	parser.add_argument('--data', dest='data', type=str, default='reprocessed.csv', nargs="?", help='What data file?')
 	
 	args = vars(parser.parse_args())
 	#print "# ARGS:", args
@@ -85,7 +85,7 @@ if __name__ == "__main__":
 	#print data
 	
 	# Loop through subjects:
-	print "subject,W.ML,W.mcmc.mean,W.mcmc.median,W.MAP,W.sd,W.lower,W.upper,MAP.BIC"
+	print "subject,W.ML,W.mean,W.median,W.MAP,W.sd,W.lower,W.upper,Wlog.mean,Wlog.sd,MAP.BIC"
 	for subject, ds in data.groupby('subject'):
 		
 		assert 'n1' in ds and 'n2' in ds and 'ntrials' in ds and 'ncorrect' in ds, "Bad column header!"
@@ -119,7 +119,7 @@ if __name__ == "__main__":
 		mymap = pymc.MAP(model)
 		mymap.fit()
 		
-		print ','.join(map(str, [subject, o[0], mean(Wsamp), median(Wsamp), mymap.W.value, std(Wsamp), W95[0], W95[1], mymap.BIC]))
+		print ','.join(map(str, [subject, o[0], mean(Wsamp), median(Wsamp), mymap.W.value, std(Wsamp), W95[0], W95[1], mean(log(Wsamp)), std(log(Wsamp)), mymap.BIC]))
 		sys.stdout.flush()
 	
 	# Done.
