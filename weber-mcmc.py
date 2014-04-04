@@ -42,7 +42,7 @@ def make_model_Jeffreys(n1, n2, ntrials, ncorrect):
 
 def make_model_Gamma(n1, n2, ntrials, ncorrect):
 	
-	tau = pymc.Gamma('tau', 2.0, 1.0)
+	tau = pymc.Gamma('tau', 0.5, 1.0) # shape, rate
 	
 	@pymc.deterministic
 	def W(tau=tau):
