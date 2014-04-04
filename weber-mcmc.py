@@ -29,7 +29,7 @@ def make_model_Jeffreys(n1, n2, ntrials, ncorrect):
 	
 	# encode our improper prior as a potential
 	@pymc.potential
-	def JeffreysPrior(W=W): return 1.0/W
+	def JeffreysPrior(W=W): return -W # log(1/W) = -W
 	
 	@pymc.deterministic
 	def p_correct(W=W, n1=n1, n2=n2): return Weber_probability_correct(W, n1, n2)
@@ -42,7 +42,10 @@ def make_model_Jeffreys(n1, n2, ntrials, ncorrect):
 
 def make_model_Gamma(n1, n2, ntrials, ncorrect):
 	
-	tau = pymc.Gamma('tau', 0.5, 1.0) # shape, rate
+	tau = pymc.Gamma('tau', 1.5, 0.1) # shape, rate, prior on tau, not W
+	# To see in R:
+	# x <- seq(0.01, 100, 0.01)
+	# plot(1/x, dgamma(x, 1.5, .01), type="l", xlim=c(0,5))
 	
 	@pymc.deterministic
 	def W(tau=tau):
