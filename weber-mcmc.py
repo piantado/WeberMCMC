@@ -27,9 +27,9 @@ def make_model_Jeffreys(n1, n2, ntrials, ncorrect):
 	# sd
 	W = pymc.Uniform('W', 0.0, 10.0, value=0.50) # pick a reasonable start place
 	
-	# encode our improper prior as a potential
+	# encode our (improper) prior as a potential, returning a log probability
 	@pymc.potential
-	def JeffreysPrior(W=W): return -W # log(1/W) = -W
+	def JeffreysPrior(W=W): return -log(W) # log(1/W) = -log(W)
 	
 	@pymc.deterministic
 	def p_correct(W=W, n1=n1, n2=n2): return Weber_probability_correct(W, n1, n2)
@@ -88,7 +88,7 @@ if __name__ == "__main__":
 	#print data
 	
 	# Loop through subjects:
-	print "subject,W.ML,W.mean,W.median,W.MAP,W.sd,W.lower,W.upper,Wlog.mean,Wlog.sd,MAP.BIC"
+	print "subject,W.ML,W.mean,W.median,W.MAP,W.sd,W.lower,W.upper,Wlog.mean,Wlog.sd,MAP.BIC,W.ML.deriv"
 	for subject, ds in data.groupby('subject'):
 		
 		assert 'n1' in ds and 'n2' in ds and 'ntrials' in ds and 'ncorrect' in ds, "Bad column header!"
@@ -118,11 +118,16 @@ if __name__ == "__main__":
 			return -sum(log(p)*ncorrect + log(1.-p)*(ntrials-ncorrect))
 		o = scipy.optimize.fmin( to_optimize, 0.5, disp=False) # optimize via scipy
 		
+		# compute numerically the derivative of the likelihood surface at the optimum
+		h = 0.0001
+		derivLL = (to_optimize(o) - to_optimize(o+h))/h
+		
+		
 		# And we'll check out the MAP fit via pymc
 		mymap = pymc.MAP(model)
 		mymap.fit()
 		
-		print ','.join(map(str, [subject, o[0], mean(Wsamp), median(Wsamp), mymap.W.value, std(Wsamp), W95[0], W95[1], mean(log(Wsamp)), std(log(Wsamp)), mymap.BIC]))
+		print ','.join(map(str, [subject, o[0], mean(Wsamp), median(Wsamp), mymap.W.value, std(Wsamp), W95[0], W95[1], mean(log(Wsamp)), std(log(Wsamp)), mymap.BIC, derivLL]))
 		sys.stdout.flush()
 	
 	# Done.
