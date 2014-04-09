@@ -6,10 +6,25 @@ from Shared import *
 # Pymc model for Weber (uniform prior on W)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+def make_model_Exponential(n1, n2, ntrials, ncorrect):
+	
+	# Draw W from an exponential
+	W = pymc.Exponential('W', 0.10, value=0.5) # pick a reasonable start place
+	
+	@pymc.deterministic
+	def p_correct(W=W, n1=n1, n2=n2): return Weber_probability_correct(W, n1, n2)
+		
+	# Now the data:n
+	data = pymc.Binomial('data', n=ntrials, p=p_correct, value=ncorrect, observed=True)
+	
+	# and pymc return
+	return locals()
+
+
 def make_model_Uniform(n1, n2, ntrials, ncorrect):
 	
 	# Draw a uniform Weber ratio
-	W = pymc.Uniform('W', 0.0, 10.0, value=0.50) # pick a reasonable start place
+	W = pymc.Uniform('W', 0.0, 3.0, value=0.50) # pick a reasonable start place
 	
 	@pymc.deterministic
 	def p_correct(W=W, n1=n1, n2=n2): return Weber_probability_correct(W, n1, n2)
@@ -70,7 +85,7 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Weber MCMC')
 	#parser.add_argument('--out', dest='out', type=str, default="./run/", nargs="?", help='The directory for output')
 	
-	parser.add_argument('--prior', dest='prior', type=str, default='Uniform', nargs="?", help='The prior (niform, Jeffreys, Gamma)')
+	parser.add_argument('--prior', dest='prior', type=str, default='Exponential', nargs="?", help='The prior (Uniform, Jeffreys, Gamma)')
 	
 	# MCMC parameters
 	parser.add_argument('--samples', dest='samples', type=int, default=10000, nargs="?", help='Number of samples to run')
@@ -102,6 +117,7 @@ if __name__ == "__main__":
 		if args['prior'] == 'Jeffreys':  model = pymc.Model(make_model_Jeffreys( n1, n2, ntrials, ncorrect))
 		elif args['prior'] == 'Uniform': model = pymc.Model(make_model_Uniform(  n1, n2, ntrials, ncorrect))
 		elif args['prior'] == 'Gamma':   model = pymc.Model(make_model_Gamma(    n1, n2, ntrials, ncorrect))
+		elif args['prior'] == 'Exponential':   model = pymc.Model(make_model_Exponential(    n1, n2, ntrials, ncorrect))
 		else: assert False, "Bad prior type: "+args['prior']
 			
 		mcmc = pymc.MCMC(model)
