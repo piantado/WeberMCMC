@@ -36,8 +36,8 @@ def make_model_Uniform(n1, n2, ntrials, ncorrect):
 	return locals()
 
 
-# A model with the Jeffrey's prior on W, treating it as a stddev (prior \priorto 1/W)
-def make_model_Jeffreys(n1, n2, ntrials, ncorrect):
+# A model with the an inverse prior on W, (which would be JEffrey's for a normal SD)
+def make_model_Inverse(n1, n2, ntrials, ncorrect):
 	
 	# sd
 	W = pymc.Uniform('W', 0.0, 10.0, value=0.50) # pick a reasonable start place
@@ -114,7 +114,7 @@ if __name__ == "__main__":
 		n1, n2, ntrials, ncorrect =  ds.n1, ds.n2, ds.ntrials, ds.ncorrect
 		assert all(ntrials >= ncorrect)
 		
-		if args['prior'] == 'Jeffreys':  model = pymc.Model(make_model_Jeffreys( n1, n2, ntrials, ncorrect))
+		if args['prior'] == 'Inverse':  model = pymc.Model(make_model_Inverse( n1, n2, ntrials, ncorrect))
 		elif args['prior'] == 'Uniform': model = pymc.Model(make_model_Uniform(  n1, n2, ntrials, ncorrect))
 		elif args['prior'] == 'Gamma':   model = pymc.Model(make_model_Gamma(    n1, n2, ntrials, ncorrect))
 		elif args['prior'] == 'Exponential':   model = pymc.Model(make_model_Exponential(    n1, n2, ntrials, ncorrect))
