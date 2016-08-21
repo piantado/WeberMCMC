@@ -89,8 +89,8 @@ if __name__ == "__main__":
 	parser.add_argument('--skip', dest='skip', type=int, default=20, nargs="?", help='Skip in chains')
 	parser.add_argument('--burn', dest='burn', type=int, default=2000, nargs="?", help='Burn-in time')
 	parser.add_argument('--tune', dest='tune', type=int, default=1000, nargs="?", help='Number of tuning steps')
-	parser.add_argument('--data', dest='data', type=str, default='reprocessed.csv', nargs="?", help='What data file?')
-	parser.add_argument('--firsthalf', dest='firsthalf', type=bool, default=False, help='Run only on the first half?')
+	parser.add_argument('--data', dest='data', type=str, default='testing/test-1.csv', nargs="?", help='What data file?')
+	#parser.add_argument('--firsthalf', dest='firsthalf', type=bool, default=False, help='Run only on the first half (of input lines)')
     
 	args = vars(parser.parse_args())
 	#print "# ARGS:", args
@@ -122,7 +122,7 @@ if __name__ == "__main__":
 		mcmc.sample(iter=args['samples'], burn=args['burn'], thin=args['skip']+1, tune_interval=args['tune'], progress_bar=False) # so skip=0 means don't skip
 		
 		Wsamp = mcmc.trace('W')[:]
-		W95 =  mcmc.W.stats()['95% HPD interval']
+		W95 =  mcmc.stats('W')['W']['95% HPD interval']
 		#print mcmc.W.stats()
 		
 		# And we'll also do the ML fit
