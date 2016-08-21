@@ -93,15 +93,13 @@ if __name__ == "__main__":
     parser.add_argument('--tune', dest='tune', type=int, default=1000, nargs="?", help='Number of tuning steps')
     parser.add_argument('--data', dest='data', type=str, default='testing/test-1.csv', nargs="?",
                         help='What data file?')
-    parser.add_argument('--firsthalf', dest='firsthalf', type=bool, default=False,
-                        help='Run only on the first half (of input lines)')
+    parser.add_argument('--firsthalf', action="store_true",  help='Run only on the first half (of input lines)')
 
     args = vars(parser.parse_args())
     # print "# ARGS:", args
 
     # Load the data
-    data = pandas.io.parsers.read_csv(args['data'],
-                                      sep=",")  # sep=None tries to automatically determine the separate (comma, space, etc)
+    data = pandas.io.parsers.read_csv(args['data'], sep=",")  # sep=None tries to automatically determine the separate (comma, space, etc)
     # print data
 
     # Loop through subjects:
@@ -112,6 +110,10 @@ if __name__ == "__main__":
 
         # Now toss missing data
         ds = ds[notnull(ds.n1) & notnull(ds.n2) & notnull(ds.ntrials) & notnull(ds.ncorrect)]
+
+        # now if we do firsthalf, use that
+        if args['firsthalf']:
+            ds = ds[:(ds.shape[0]/2)]
 
         n1, n2, ntrials, ncorrect = ds.n1, ds.n2, ds.ntrials, ds.ncorrect
         assert all(ntrials >= ncorrect)
