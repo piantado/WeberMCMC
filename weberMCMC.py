@@ -94,7 +94,7 @@ if __name__ == "__main__":
     parser.add_argument('--data', dest='data', type=str, default='testing/test-1.csv', nargs="?",
                         help='What data file?')
     parser.add_argument('--firsthalf', action="store_true",  help='Run only on the first half (of input lines)')
-
+    parser.add_argument('--out', dest='out', type=str, default='out.csv', nargs=1, help='Where to write output')
     args = vars(parser.parse_args())
     # print "# ARGS:", args
 
@@ -102,63 +102,64 @@ if __name__ == "__main__":
     data = pandas.io.parsers.read_csv(args['data'], sep=",")  # sep=None tries to automatically determine the separate (comma, space, etc)
     # print data
 
-    # Loop through subjects:
-    print "subject,W.ML,W.mean,W.median,W.MAP,W.sd,W.lower,W.upper,Wlog.mean,Wlog.sd,MAP.BIC,W.ML.deriv"
-    for subject, ds in data.groupby('subject'):
+    with open(args['out'], 'w') as f:
+        # Loop through subjects:
+        print >>f, "subject,W.ML,W.mean,W.median,W.MAP,W.sd,W.lower,W.upper,Wlog.mean,Wlog.sd,MAP.BIC,W.ML.deriv"
+        for subject, ds in data.groupby('subject'):
 
-        assert 'n1' in ds and 'n2' in ds and 'ntrials' in ds and 'ncorrect' in ds, "Bad column header!"
+            assert 'n1' in ds and 'n2' in ds and 'ntrials' in ds and 'ncorrect' in ds, "Bad column header!"
 
-        # Now toss missing data
-        ds = ds[notnull(ds.n1) & notnull(ds.n2) & notnull(ds.ntrials) & notnull(ds.ncorrect)]
+            # Now toss missing data
+            ds = ds[notnull(ds.n1) & notnull(ds.n2) & notnull(ds.ntrials) & notnull(ds.ncorrect)]
 
-        # now if we do firsthalf, use that
-        if args['firsthalf']:
-            ds = ds[:(ds.shape[0]/2)]
+            # now if we do firsthalf, use that
+            if args['firsthalf']:
+                ds = ds[:(ds.shape[0]/2)]
 
-        n1, n2, ntrials, ncorrect = ds.n1, ds.n2, ds.ntrials, ds.ncorrect
-        assert all(ntrials >= ncorrect)
+            n1, n2, ntrials, ncorrect = ds.n1, ds.n2, ds.ntrials, ds.ncorrect
+            assert all(ntrials >= ncorrect)
 
-        if args['prior'] == 'Inverse':
-            model = pymc.Model(make_model_Inverse(n1, n2, ntrials, ncorrect))
-        elif args['prior'] == 'Uniform':
-            model = pymc.Model(make_model_Uniform(n1, n2, ntrials, ncorrect))
-        elif args['prior'] == 'InverseGamma':
-            model = pymc.Model(make_model_InverseGamma(n1, n2, ntrials, ncorrect))
-        elif args['prior'] == 'Exponential':
-            model = pymc.Model(make_model_Exponential(n1, n2, ntrials, ncorrect))
-        else:
-            assert False, "Bad prior type: " + args['prior']
+            if args['prior'] == 'Inverse':
+                model = pymc.Model(make_model_Inverse(n1, n2, ntrials, ncorrect))
+            elif args['prior'] == 'Uniform':
+                model = pymc.Model(make_model_Uniform(n1, n2, ntrials, ncorrect))
+            elif args['prior'] == 'InverseGamma':
+                model = pymc.Model(make_model_InverseGamma(n1, n2, ntrials, ncorrect))
+            elif args['prior'] == 'Exponential':
+                model = pymc.Model(make_model_Exponential(n1, n2, ntrials, ncorrect))
+            else:
+                assert False, "Bad prior type: " + args['prior']
 
-        mcmc = pymc.MCMC(model)
+            mcmc = pymc.MCMC(model)
 
-        mcmc.sample(iter=args['samples'], burn=args['burn'], thin=args['skip'] + 1, tune_interval=args['tune'],
-                    progress_bar=False)  # so skip=0 means don't skip
+            mcmc.sample(iter=args['samples'], burn=args['burn'], thin=args['skip'] + 1, tune_interval=args['tune'],
+                        progress_bar=False)  # so skip=0 means don't skip
 
-        Wsamp = mcmc.trace('W')[:]
-        W95 = mcmc.stats('W')['W']['95% HPD interval']
-
-
-        # print mcmc.W.stats()
-
-        # And we'll also do the ML fit
-        def to_optimize(W):
-            p = Weber_probability_correct(W, n1, n2)
-            return -sum(log(p) * ncorrect + log(1. - p) * (ntrials - ncorrect))
+            Wsamp = mcmc.trace('W')[:]
+            W95 = mcmc.stats('W')['W']['95% HPD interval']
 
 
-        o = scipy.optimize.fmin(to_optimize, 0.5, disp=False)  # optimize via scipy
+            # print mcmc.W.stats()
 
-        # compute numerically the derivative of the likelihood surface at the optimum
-        h = 0.0001
-        derivLL = (to_optimize(o) - to_optimize(o + h)) / h
+            # And we'll also do the ML fit
+            def to_optimize(W):
+                p = Weber_probability_correct(W, n1, n2)
+                return -sum(log(p) * ncorrect + log(1. - p) * (ntrials - ncorrect))
 
-        # And we'll check out the MAP fit via pymc
-        mymap = pymc.MAP(model)
-        mymap.fit()
 
-        print ','.join(map(str, [subject, o[0], mean(Wsamp), median(Wsamp), mymap.W.value, std(Wsamp), W95[0], W95[1],
-                                 mean(log(Wsamp)), std(log(Wsamp)), mymap.BIC, derivLL]))
-        sys.stdout.flush()
+            o = scipy.optimize.fmin(to_optimize, 0.5, disp=False)  # optimize via scipy
+
+            # compute numerically the derivative of the likelihood surface at the optimum
+            h = 0.0001
+            derivLL = (to_optimize(o) - to_optimize(o + h)) / h
+
+            # And we'll check out the MAP fit via pymc
+            mymap = pymc.MAP(model)
+            mymap.fit()
+
+            print  >>f, ','.join(map(str, [subject, o[0], mean(Wsamp), median(Wsamp), mymap.W.value, std(Wsamp), W95[0], W95[1],
+                                     mean(log(Wsamp)), std(log(Wsamp)), mymap.BIC, derivLL]))
+            f.flush()
 
     # Done.
     quit()
